@@ -5,6 +5,7 @@ public class HotelManagementSystem {
     private static Connection connection;
     private static Scanner scanner = new Scanner(System.in);
     private static String loggedInUser = "";
+    private static String loggedInRole = "";
     
     private static final String DB_URL = "jdbc:mysql://localhost:3306/hotel_management";
     private static final String DB_USER = "root";
@@ -32,9 +33,27 @@ public class HotelManagementSystem {
                         case 4: checkInGuest(); break;
                         case 5: checkOutGuest(); break;
                         case 6: searchGuest(); break;
-                        case 7: manageRooms(); break;
-                        case 8: manageStaff(); break;
-                        case 9: viewReports(); break;
+                        case 7: 
+                            if (loggedInRole.equals("ADMIN")) {
+                                manageRooms();
+                            } else {
+                                System.out.println("❌ Access Denied! Admin only.");
+                            }
+                            break;
+                        case 8: 
+                            if (loggedInRole.equals("ADMIN")) {
+                                manageStaff();
+                            } else {
+                                System.out.println("❌ Access Denied! Admin only.");
+                            }
+                            break;
+                        case 9: 
+                            if (loggedInRole.equals("ADMIN")) {
+                                viewReports();
+                            } else {
+                                System.out.println("❌ Access Denied! Admin only.");
+                            }
+                            break;
                         case 0: 
                             running = false;
                             System.out.println("Thank you!");
@@ -64,13 +83,14 @@ public class HotelManagementSystem {
         
         try {
             Statement stmt = connection.createStatement();
-            String query = "SELECT username, full_name FROM staff WHERE username = '" + 
+            String query = "SELECT username, full_name, role FROM staff WHERE username = '" + 
                           username + "' AND password = '" + password + "' AND status = 'ACTIVE'";
             ResultSet rs = stmt.executeQuery(query);
             
             if (rs.next()) {
                 loggedInUser = rs.getString("username");
-                System.out.println("\nWelcome, " + rs.getString("full_name") + "!\n");
+                loggedInRole = rs.getString("role");
+                System.out.println("\nWelcome, " + rs.getString("full_name") + " (" + loggedInRole + ")!\n");
                 return true;
             } else {
                 System.out.println("Invalid credentials!");
@@ -92,9 +112,14 @@ public class HotelManagementSystem {
         System.out.println("4. Check-In Guest");
         System.out.println("5. Check-Out Guest");
         System.out.println("6. Search Guest");
-        System.out.println("7. Manage Rooms");
-        System.out.println("8. Manage Staff");
-        System.out.println("9. View Reports");
+        
+        // Admin-only options
+        if (loggedInRole.equals("ADMIN")) {
+            System.out.println("7. Manage Rooms (Admin)");
+            System.out.println("8. Manage Staff (Admin)");
+            System.out.println("9. View Reports (Admin)");
+        }
+        
         System.out.println("0. Exit");
         System.out.println("==============================================");
     }
