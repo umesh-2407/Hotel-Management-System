@@ -4,25 +4,21 @@ import java.util.Scanner;
 public class HotelManagementSystem {
     private static Connection connection;
     private static Scanner scanner = new Scanner(System.in);
-    private static String loggedInRole = "";
+    private static String loggedInUser = "";
     
-    // Database configuration
     private static final String DB_URL = "jdbc:mysql://localhost:3306/hotel_management";
     private static final String DB_USER = "root";
     private static final String DB_PASSWORD = "root";
     
     public static void main(String[] args) {
         try {
-            // Load MySQL Driver
             Class.forName("com.mysql.cj.jdbc.Driver");
-            
-            // Connect to database
             connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+            
             System.out.println("==============================================");
             System.out.println("   HOTEL MANAGEMENT SYSTEM");
             System.out.println("==============================================\n");
             
-            // Login
             if (login()) {
                 boolean running = true;
                 while (running) {
@@ -49,7 +45,6 @@ public class HotelManagementSystem {
             }
         } catch (Exception e) {
             System.out.println("Error: " + e.getMessage());
-            e.printStackTrace();
         } finally {
             try {
                 if (connection != null) connection.close();
@@ -60,7 +55,6 @@ public class HotelManagementSystem {
         }
     }
     
-    // Login function
     private static boolean login() {
         System.out.println("--- LOGIN ---");
         System.out.print("Username: ");
@@ -70,12 +64,12 @@ public class HotelManagementSystem {
         
         try {
             Statement stmt = connection.createStatement();
-            String query = "SELECT role, full_name FROM staff WHERE username = '" + username + 
-                          "' AND password = '" + password + "' AND status = 'ACTIVE'";
+            String query = "SELECT username, full_name FROM staff WHERE username = '" + 
+                          username + "' AND password = '" + password + "' AND status = 'ACTIVE'";
             ResultSet rs = stmt.executeQuery(query);
             
             if (rs.next()) {
-                loggedInRole = rs.getString("role");
+                loggedInUser = rs.getString("username");
                 System.out.println("\nWelcome, " + rs.getString("full_name") + "!\n");
                 return true;
             } else {
@@ -83,12 +77,11 @@ public class HotelManagementSystem {
                 return false;
             }
         } catch (SQLException e) {
-            System.out.println("Login error: " + e.getMessage());
+            System.out.println("Error: " + e.getMessage());
             return false;
         }
     }
     
-    // Display menu
     private static void displayMenu() {
         System.out.println("\n==============================================");
         System.out.println("              MAIN MENU");
@@ -106,45 +99,39 @@ public class HotelManagementSystem {
         System.out.println("==============================================");
     }
     
-    // View available rooms
     private static void viewAvailableRooms() {
         System.out.println("\n--- AVAILABLE ROOMS ---");
         
         try {
             Statement stmt = connection.createStatement();
-            String query = "SELECT r.room_id, r.room_number, rt.type_name, rt.base_price, r.floor_number " +
-                          "FROM rooms r JOIN room_types rt ON r.type_id = rt.type_id " +
-                          "WHERE r.status = 'AVAILABLE'";
+            String query = "SELECT room_id, room_number, room_type, price, floor_number, capacity " +
+                          "FROM rooms WHERE status = 'AVAILABLE' ORDER BY room_number";
             ResultSet rs = stmt.executeQuery(query);
             
-            System.out.println("\n+----------+-------------+---------------+----------+-------+");
-            System.out.println("| Room ID  | Room Number | Type          | Price    | Floor |");
-            System.out.println("+----------+-------------+---------------+----------+-------+");
+            System.out.println("\n+----------+-------------+---------------+----------+-------+----------+");
+            System.out.println("| Room ID  | Room Number | Type          | Price    | Floor | Capacity |");
+            System.out.println("+----------+-------------+---------------+----------+-------+----------+");
             
             while (rs.next()) {
-                System.out.printf("| %-8d | %-11s | %-13s | ₹%-7.2f | %-5d |\n",
+                System.out.printf("| %-8d | %-11s | %-13s | ₹%-7.2f | %-5d | %-8d |\n",
                     rs.getInt("room_id"),
                     rs.getString("room_number"),
-                    rs.getString("type_name"),
-                    rs.getDouble("base_price"),
-                    rs.getInt("floor_number"));
+                    rs.getString("room_type"),
+                    rs.getDouble("price"),
+                    rs.getInt("floor_number"),
+                    rs.getInt("capacity"));
             }
-            System.out.println("+----------+-------------+---------------+----------+-------+");
-            
+            System.out.println("+----------+-------------+---------------+----------+-------+----------+");
         } catch (SQLException e) {
             System.out.println("Error: " + e.getMessage());
         }
     }
     
-    // Create booking
     private static void createBooking() {
         System.out.println("\n--- CREATE BOOKING ---");
         
-        // Get guest details
-        System.out.print("First Name: ");
-        String firstName = scanner.nextLine();
-        System.out.print("Last Name: ");
-        String lastName = scanner.nextLine();
+        System.out.print("Guest Name: ");
+        String guestName = scanner.nextLine();
         System.out.print("Email: ");
         String email = scanner.nextLine();
         System.out.print("Phone: ");
@@ -152,51 +139,43 @@ public class HotelManagementSystem {
         System.out.print("ID Proof: ");
         String idProof = scanner.nextLine();
         
-        // Get booking details
-        System.out.print("Check-in date (YYYY-MM-DD): ");
+        System.out.print("Check-in (YYYY-MM-DD): ");
         String checkIn = scanner.nextLine();
-        System.out.print("Check-out date (YYYY-MM-DD): ");
+        System.out.print("Check-out (YYYY-MM-DD): ");
         String checkOut = scanner.nextLine();
+        
         int roomId = getIntInput("Room ID: ");
         int numGuests = getIntInput("Number of guests: ");
+        System.out.print("Special requests: ");
+        String requests = scanner.nextLine();
         
         try {
             Statement stmt = connection.createStatement();
             
-            // Get room price
-            String priceQuery = "SELECT rt.base_price FROM rooms r " +
-                               "JOIN room_types rt ON r.type_id = rt.type_id " +
-                               "WHERE r.room_id = " + roomId;
-            ResultSet rs = stmt.executeQuery(priceQuery);
+            // Get room details
+            String roomQuery = "SELECT room_number, price FROM rooms WHERE room_id = " + roomId;
+            ResultSet rs = stmt.executeQuery(roomQuery);
             
             if (!rs.next()) {
-                System.out.println("Invalid room ID!");
+                System.out.println("Room not found!");
                 return;
             }
             
-            double price = rs.getDouble("base_price");
-            double total = price * 1; // Simplified - 1 day
+            String roomNumber = rs.getString("room_number");
+            double price = rs.getDouble("price");
+            double total = price; // Simplified - 1 day
             
-            // Insert guest
-            String guestQuery = "INSERT INTO guests (first_name, last_name, email, phone, id_proof) " +
-                               "VALUES ('" + firstName + "', '" + lastName + "', '" + email + 
-                               "', '" + phone + "', '" + idProof + "')";
-            stmt.executeUpdate(guestQuery, Statement.RETURN_GENERATED_KEYS);
+            // Insert booking (guest info included)
+            String query = "INSERT INTO bookings (guest_name, guest_email, guest_phone, guest_id_proof, " +
+                          "room_id, room_number, check_in_date, check_out_date, num_guests, total_amount, " +
+                          "special_requests, booked_by) VALUES ('" + 
+                          guestName + "', '" + email + "', '" + phone + "', '" + idProof + "', " +
+                          roomId + ", '" + roomNumber + "', '" + checkIn + "', '" + checkOut + "', " +
+                          numGuests + ", " + total + ", '" + requests + "', '" + loggedInUser + "')";
             
+            stmt.executeUpdate(query, Statement.RETURN_GENERATED_KEYS);
             rs = stmt.getGeneratedKeys();
-            int guestId = 0;
-            if (rs.next()) {
-                guestId = rs.getInt(1);
-            }
             
-            // Create booking
-            String bookingQuery = "INSERT INTO bookings (guest_id, room_id, check_in_date, " +
-                                 "check_out_date, num_guests, total_amount, booked_by) " +
-                                 "VALUES (" + guestId + ", " + roomId + ", '" + checkIn + 
-                                 "', '" + checkOut + "', " + numGuests + ", " + total + ", 1)";
-            stmt.executeUpdate(bookingQuery, Statement.RETURN_GENERATED_KEYS);
-            
-            rs = stmt.getGeneratedKeys();
             if (rs.next()) {
                 System.out.println("\n✓ Booking created! ID: " + rs.getInt(1));
                 System.out.println("Total Amount: ₹" + total);
@@ -210,43 +189,37 @@ public class HotelManagementSystem {
         }
     }
     
-    // View all bookings
     private static void viewBookings() {
         System.out.println("\n--- ALL BOOKINGS ---");
         
         try {
             Statement stmt = connection.createStatement();
-            String query = "SELECT b.booking_id, CONCAT(g.first_name, ' ', g.last_name) AS guest_name, " +
-                          "r.room_number, b.check_in_date, b.check_out_date, " +
-                          "b.booking_status, b.total_amount " +
-                          "FROM bookings b " +
-                          "JOIN guests g ON b.guest_id = g.guest_id " +
-                          "JOIN rooms r ON b.room_id = r.room_id " +
-                          "ORDER BY b.booking_id DESC LIMIT 20";
+            String query = "SELECT booking_id, guest_name, guest_phone, room_number, " +
+                          "check_in_date, check_out_date, booking_status, total_amount " +
+                          "FROM bookings ORDER BY booking_id DESC LIMIT 20";
             ResultSet rs = stmt.executeQuery(query);
             
-            System.out.println("\n+------------+----------------------+-------------+------------+------------+--------------+----------+");
-            System.out.println("| Booking ID | Guest Name           | Room        | Check-In   | Check-Out  | Status       | Amount   |");
-            System.out.println("+------------+----------------------+-------------+------------+------------+--------------+----------+");
+            System.out.println("\n+------------+----------------------+---------------+-------------+------------+------------+--------------+----------+");
+            System.out.println("| Booking ID | Guest Name           | Phone         | Room        | Check-In   | Check-Out  | Status       | Amount   |");
+            System.out.println("+------------+----------------------+---------------+-------------+------------+------------+--------------+----------+");
             
             while (rs.next()) {
-                System.out.printf("| %-10d | %-20s | %-11s | %-10s | %-10s | %-12s | ₹%-7.2f |\n",
+                System.out.printf("| %-10d | %-20s | %-13s | %-11s | %-10s | %-10s | %-12s | ₹%-7.2f |\n",
                     rs.getInt("booking_id"),
                     rs.getString("guest_name"),
+                    rs.getString("guest_phone"),
                     rs.getString("room_number"),
                     rs.getString("check_in_date"),
                     rs.getString("check_out_date"),
                     rs.getString("booking_status"),
                     rs.getDouble("total_amount"));
             }
-            System.out.println("+------------+----------------------+-------------+------------+------------+--------------+----------+");
-            
+            System.out.println("+------------+----------------------+---------------+-------------+------------+------------+--------------+----------+");
         } catch (SQLException e) {
             System.out.println("Error: " + e.getMessage());
         }
     }
     
-    // Check-in guest
     private static void checkInGuest() {
         System.out.println("\n--- CHECK-IN ---");
         int bookingId = getIntInput("Booking ID: ");
@@ -258,16 +231,15 @@ public class HotelManagementSystem {
             int rows = stmt.executeUpdate(query);
             
             if (rows > 0) {
-                System.out.println("✓ Guest checked in successfully!");
+                System.out.println("✓ Guest checked in!");
             } else {
-                System.out.println("Booking not found or already checked in!");
+                System.out.println("Booking not found!");
             }
         } catch (SQLException e) {
             System.out.println("Error: " + e.getMessage());
         }
     }
     
-    // Check-out guest
     private static void checkOutGuest() {
         System.out.println("\n--- CHECK-OUT ---");
         int bookingId = getIntInput("Booking ID: ");
@@ -275,7 +247,7 @@ public class HotelManagementSystem {
         try {
             Statement stmt = connection.createStatement();
             
-            // Get booking amount
+            // Get booking details
             String query = "SELECT total_amount, room_id FROM bookings " +
                           "WHERE booking_id = " + bookingId + " AND booking_status = 'CHECKED_IN'";
             ResultSet rs = stmt.executeQuery(query);
@@ -288,125 +260,98 @@ public class HotelManagementSystem {
             double amount = rs.getDouble("total_amount");
             int roomId = rs.getInt("room_id");
             
-            System.out.println("Total Amount: ₹" + amount);
+            System.out.println("Total: ₹" + amount);
             System.out.print("Payment Method (CASH/CARD/UPI): ");
             String method = scanner.nextLine();
             
-            // Insert payment
-            String paymentQuery = "INSERT INTO payments (booking_id, amount, payment_method) " +
-                                 "VALUES (" + bookingId + ", " + amount + ", '" + method + "')";
-            stmt.executeUpdate(paymentQuery);
-            
-            // Update booking status
-            stmt.executeUpdate("UPDATE bookings SET booking_status = 'CHECKED_OUT' " +
-                             "WHERE booking_id = " + bookingId);
+            // Update booking with payment info
+            String updateQuery = "UPDATE bookings SET booking_status = 'CHECKED_OUT', " +
+                                "payment_method = '" + method + "', payment_status = 'PAID' " +
+                                "WHERE booking_id = " + bookingId;
+            stmt.executeUpdate(updateQuery);
             
             // Update room status
             stmt.executeUpdate("UPDATE rooms SET status = 'AVAILABLE' WHERE room_id = " + roomId);
             
-            System.out.println("✓ Check-out successful! Payment received: ₹" + amount);
-            
+            System.out.println("✓ Check-out successful!");
         } catch (SQLException e) {
             System.out.println("Error: " + e.getMessage());
         }
     }
     
-    // Search guest
     private static void searchGuest() {
         System.out.println("\n--- SEARCH GUEST ---");
-        System.out.print("Enter phone or email: ");
+        System.out.print("Enter phone or name: ");
         String search = scanner.nextLine();
         
         try {
             Statement stmt = connection.createStatement();
-            String query = "SELECT g.guest_id, CONCAT(g.first_name, ' ', g.last_name) AS name, " +
-                          "g.email, g.phone, COUNT(b.booking_id) AS bookings " +
-                          "FROM guests g " +
-                          "LEFT JOIN bookings b ON g.guest_id = b.guest_id " +
-                          "WHERE g.phone LIKE '%" + search + "%' OR g.email LIKE '%" + search + "%' " +
-                          "GROUP BY g.guest_id";
+            String query = "SELECT guest_name, guest_phone, guest_email, " +
+                          "COUNT(*) AS total_bookings, SUM(total_amount) AS total_spent " +
+                          "FROM bookings WHERE guest_phone LIKE '%" + search + 
+                          "%' OR guest_name LIKE '%" + search + "%' GROUP BY guest_phone";
             ResultSet rs = stmt.executeQuery(query);
             
-            System.out.println("\n+----------+----------------------+---------------------------+---------------+----------+");
-            System.out.println("| Guest ID | Name                 | Email                     | Phone         | Bookings |");
-            System.out.println("+----------+----------------------+---------------------------+---------------+----------+");
+            System.out.println("\n+----------------------+---------------+---------------------------+----------+-------------+");
+            System.out.println("| Name                 | Phone         | Email                     | Bookings | Total Spent |");
+            System.out.println("+----------------------+---------------+---------------------------+----------+-------------+");
             
             boolean found = false;
             while (rs.next()) {
                 found = true;
-                System.out.printf("| %-8d | %-20s | %-25s | %-13s | %-8d |\n",
-                    rs.getInt("guest_id"),
-                    rs.getString("name"),
-                    rs.getString("email"),
-                    rs.getString("phone"),
-                    rs.getInt("bookings"));
+                System.out.printf("| %-20s | %-13s | %-25s | %-8d | ₹%-10.2f |\n",
+                    rs.getString("guest_name"),
+                    rs.getString("guest_phone"),
+                    rs.getString("guest_email"),
+                    rs.getInt("total_bookings"),
+                    rs.getDouble("total_spent"));
             }
-            System.out.println("+----------+----------------------+---------------------------+---------------+----------+");
+            System.out.println("+----------------------+---------------+---------------------------+----------+-------------+");
             
             if (!found) System.out.println("No guest found!");
-            
         } catch (SQLException e) {
             System.out.println("Error: " + e.getMessage());
         }
     }
     
-    // View reports
-    private static void viewReports() {
-        System.out.println("\n--- REPORTS ---");
-        System.out.println("1. Occupancy Report");
-        System.out.println("2. Revenue Report");
-        
-        int choice = getIntInput("Choose: ");
-        
-        if (choice == 1) {
-            occupancyReport();
-        } else if (choice == 2) {
-            revenueReport();
-        }
-    }
-    
-    // Manage rooms
     private static void manageRooms() {
         System.out.println("\n--- MANAGE ROOMS ---");
-        System.out.println("1. Add New Room");
-        System.out.println("2. Update Room Status");
-        System.out.println("3. View All Rooms");
+        System.out.println("1. Add Room");
+        System.out.println("2. Update Status");
+        System.out.println("3. View All");
         
         int choice = getIntInput("Choose: ");
         
-        if (choice == 1) {
-            addNewRoom();
-        } else if (choice == 2) {
-            updateRoomStatus();
-        } else if (choice == 3) {
-            viewAllRooms();
-        }
+        if (choice == 1) addRoom();
+        else if (choice == 2) updateRoomStatus();
+        else if (choice == 3) viewAllRooms();
     }
     
-    // Add new room
-    private static void addNewRoom() {
-        System.out.println("\n--- ADD NEW ROOM ---");
+    private static void addRoom() {
+        System.out.println("\n--- ADD ROOM ---");
         System.out.print("Room Number: ");
-        String roomNumber = scanner.nextLine();
-        int typeId = getIntInput("Room Type (1-Single, 2-Double, 3-Deluxe, 4-Suite): ");
-        int floor = getIntInput("Floor Number: ");
+        String number = scanner.nextLine();
+        System.out.print("Type (Single/Double/Deluxe/Suite): ");
+        String type = scanner.nextLine();
+        double price = getDoubleInput("Price: ");
+        int capacity = getIntInput("Capacity: ");
+        int floor = getIntInput("Floor: ");
         
         try {
             Statement stmt = connection.createStatement();
-            String query = "INSERT INTO rooms (room_number, type_id, floor_number, status) " +
-                          "VALUES ('" + roomNumber + "', " + typeId + ", " + floor + ", 'AVAILABLE')";
+            String query = "INSERT INTO rooms (room_number, room_type, price, capacity, floor_number) " +
+                          "VALUES ('" + number + "', '" + type + "', " + price + ", " + capacity + ", " + floor + ")";
             stmt.executeUpdate(query);
-            System.out.println("✓ Room added successfully!");
+            System.out.println("✓ Room added!");
         } catch (SQLException e) {
             System.out.println("Error: " + e.getMessage());
         }
     }
     
-    // Update room status
     private static void updateRoomStatus() {
-        System.out.println("\n--- UPDATE ROOM STATUS ---");
+        System.out.println("\n--- UPDATE ROOM ---");
         int roomId = getIntInput("Room ID: ");
-        System.out.print("New Status (AVAILABLE/OCCUPIED/MAINTENANCE): ");
+        System.out.print("Status (AVAILABLE/OCCUPIED/MAINTENANCE): ");
         String status = scanner.nextLine();
         
         try {
@@ -414,128 +359,110 @@ public class HotelManagementSystem {
             String query = "UPDATE rooms SET status = '" + status + "' WHERE room_id = " + roomId;
             int rows = stmt.executeUpdate(query);
             
-            if (rows > 0) {
-                System.out.println("✓ Room status updated!");
-            } else {
-                System.out.println("Room not found!");
-            }
+            if (rows > 0) System.out.println("✓ Updated!");
+            else System.out.println("Room not found!");
         } catch (SQLException e) {
             System.out.println("Error: " + e.getMessage());
         }
     }
     
-    // View all rooms
     private static void viewAllRooms() {
         System.out.println("\n--- ALL ROOMS ---");
         
         try {
             Statement stmt = connection.createStatement();
-            String query = "SELECT r.room_id, r.room_number, rt.type_name, r.floor_number, " +
-                          "r.status, rt.base_price FROM rooms r " +
-                          "JOIN room_types rt ON r.type_id = rt.type_id " +
-                          "ORDER BY r.room_number";
+            String query = "SELECT * FROM rooms ORDER BY room_number";
             ResultSet rs = stmt.executeQuery(query);
             
-            System.out.println("\n+----------+-------------+---------------+-------+-------------+----------+");
-            System.out.println("| Room ID  | Room Number | Type          | Floor | Status      | Price    |");
-            System.out.println("+----------+-------------+---------------+-------+-------------+----------+");
+            System.out.println("\n+----------+-------------+---------------+----------+-------+----------+-------------+");
+            System.out.println("| Room ID  | Room Number | Type          | Price    | Floor | Capacity | Status      |");
+            System.out.println("+----------+-------------+---------------+----------+-------+----------+-------------+");
             
             while (rs.next()) {
-                System.out.printf("| %-8d | %-11s | %-13s | %-5d | %-11s | ₹%-7.2f |\n",
+                System.out.printf("| %-8d | %-11s | %-13s | ₹%-7.2f | %-5d | %-8d | %-11s |\n",
                     rs.getInt("room_id"),
                     rs.getString("room_number"),
-                    rs.getString("type_name"),
+                    rs.getString("room_type"),
+                    rs.getDouble("price"),
                     rs.getInt("floor_number"),
-                    rs.getString("status"),
-                    rs.getDouble("base_price"));
+                    rs.getInt("capacity"),
+                    rs.getString("status"));
             }
-            System.out.println("+----------+-------------+---------------+-------+-------------+----------+");
+            System.out.println("+----------+-------------+---------------+----------+-------+----------+-------------+");
         } catch (SQLException e) {
             System.out.println("Error: " + e.getMessage());
         }
     }
     
-    // Manage staff
     private static void manageStaff() {
         System.out.println("\n--- MANAGE STAFF ---");
-        System.out.println("1. Add New Staff");
-        System.out.println("2. View All Staff");
-        System.out.println("3. Update Staff Status");
+        System.out.println("1. Add Staff");
+        System.out.println("2. View All");
+        System.out.println("3. Update Status");
         
         int choice = getIntInput("Choose: ");
         
-        if (choice == 1) {
-            addNewStaff();
-        } else if (choice == 2) {
-            viewAllStaff();
-        } else if (choice == 3) {
-            updateStaffStatus();
-        }
+        if (choice == 1) addStaff();
+        else if (choice == 2) viewAllStaff();
+        else if (choice == 3) updateStaffStatus();
     }
     
-    // Add new staff
-    private static void addNewStaff() {
-        System.out.println("\n--- ADD NEW STAFF ---");
+    private static void addStaff() {
+        System.out.println("\n--- ADD STAFF ---");
         System.out.print("Username: ");
         String username = scanner.nextLine();
         System.out.print("Password: ");
         String password = scanner.nextLine();
         System.out.print("Full Name: ");
-        String fullName = scanner.nextLine();
+        String name = scanner.nextLine();
         System.out.print("Role (ADMIN/RECEPTIONIST/MANAGER): ");
         String role = scanner.nextLine();
-        System.out.print("Email: ");
-        String email = scanner.nextLine();
         System.out.print("Phone: ");
         String phone = scanner.nextLine();
         
         try {
             Statement stmt = connection.createStatement();
-            String query = "INSERT INTO staff (username, password, full_name, role, email, phone, status) " +
-                          "VALUES ('" + username + "', '" + password + "', '" + fullName + "', '" + 
-                          role + "', '" + email + "', '" + phone + "', 'ACTIVE')";
+            String query = "INSERT INTO staff (username, password, full_name, role, phone) " +
+                          "VALUES ('" + username + "', '" + password + "', '" + name + "', '" + 
+                          role + "', '" + phone + "')";
             stmt.executeUpdate(query);
-            System.out.println("✓ Staff added successfully!");
+            System.out.println("✓ Staff added!");
         } catch (SQLException e) {
             System.out.println("Error: " + e.getMessage());
         }
     }
     
-    // View all staff
     private static void viewAllStaff() {
         System.out.println("\n--- ALL STAFF ---");
         
         try {
             Statement stmt = connection.createStatement();
-            String query = "SELECT staff_id, username, full_name, role, email, phone, status " +
-                          "FROM staff ORDER BY staff_id";
+            String query = "SELECT * FROM staff ORDER BY staff_id";
             ResultSet rs = stmt.executeQuery(query);
             
-            System.out.println("\n+----------+-------------+----------------------+--------------+---------------------------+---------------+----------+");
-            System.out.println("| Staff ID | Username    | Full Name            | Role         | Email                     | Phone         | Status   |");
-            System.out.println("+----------+-------------+----------------------+--------------+---------------------------+---------------+----------+");
+            System.out.println("\n+----------+-------------+----------------------+--------------+---------------+----------+");
+            System.out.println("| Staff ID | Username    | Full Name            | Role         | Phone         | Status   |");
+            System.out.println("+----------+-------------+----------------------+--------------+---------------+----------+");
             
             while (rs.next()) {
-                System.out.printf("| %-8d | %-11s | %-20s | %-12s | %-25s | %-13s | %-8s |\n",
+                System.out.printf("| %-8d | %-11s | %-20s | %-12s | %-13s | %-8s |\n",
                     rs.getInt("staff_id"),
                     rs.getString("username"),
                     rs.getString("full_name"),
                     rs.getString("role"),
-                    rs.getString("email"),
                     rs.getString("phone"),
                     rs.getString("status"));
             }
-            System.out.println("+----------+-------------+----------------------+--------------+---------------------------+---------------+----------+");
+            System.out.println("+----------+-------------+----------------------+--------------+---------------+----------+");
         } catch (SQLException e) {
             System.out.println("Error: " + e.getMessage());
         }
     }
     
-    // Update staff status
     private static void updateStaffStatus() {
-        System.out.println("\n--- UPDATE STAFF STATUS ---");
+        System.out.println("\n--- UPDATE STAFF ---");
         int staffId = getIntInput("Staff ID: ");
-        System.out.print("New Status (ACTIVE/INACTIVE): ");
+        System.out.print("Status (ACTIVE/INACTIVE): ");
         String status = scanner.nextLine();
         
         try {
@@ -543,117 +470,112 @@ public class HotelManagementSystem {
             String query = "UPDATE staff SET status = '" + status + "' WHERE staff_id = " + staffId;
             int rows = stmt.executeUpdate(query);
             
-            if (rows > 0) {
-                System.out.println("✓ Staff status updated!");
-            } else {
-                System.out.println("Staff not found!");
-            }
+            if (rows > 0) System.out.println("✓ Updated!");
+            else System.out.println("Staff not found!");
         } catch (SQLException e) {
             System.out.println("Error: " + e.getMessage());
         }
     }
     
-    // Occupancy report
+    private static void viewReports() {
+        System.out.println("\n--- REPORTS ---");
+        System.out.println("1. Occupancy");
+        System.out.println("2. Revenue");
+        
+        int choice = getIntInput("Choose: ");
+        
+        if (choice == 1) occupancyReport();
+        else if (choice == 2) revenueReport();
+    }
+    
     private static void occupancyReport() {
-        System.out.println("\n--- OCCUPANCY REPORT ---");
+        System.out.println("\n--- OCCUPANCY ---");
         
         try {
             Statement stmt = connection.createStatement();
-            String query = "SELECT rt.type_name, " +
-                          "COUNT(r.room_id) AS total, " +
-                          "SUM(CASE WHEN r.status = 'OCCUPIED' THEN 1 ELSE 0 END) AS occupied, " +
-                          "SUM(CASE WHEN r.status = 'AVAILABLE' THEN 1 ELSE 0 END) AS available " +
-                          "FROM room_types rt " +
-                          "LEFT JOIN rooms r ON rt.type_id = r.type_id " +
-                          "GROUP BY rt.type_id";
+            String query = "SELECT * FROM room_occupancy";
             ResultSet rs = stmt.executeQuery(query);
             
             System.out.println("\n+---------------+-------+----------+-----------+");
-            System.out.println("| Room Type     | Total | Occupied | Available |");
+            System.out.println("| Type          | Total | Occupied | Available |");
             System.out.println("+---------------+-------+----------+-----------+");
             
-            int totalRooms = 0, totalOccupied = 0;
-            
+            int total = 0, occupied = 0;
             while (rs.next()) {
-                int total = rs.getInt("total");
-                int occupied = rs.getInt("occupied");
-                int available = rs.getInt("available");
+                int t = rs.getInt("total_rooms");
+                int o = rs.getInt("occupied_rooms");
+                int a = rs.getInt("available_rooms");
                 
                 System.out.printf("| %-13s | %-5d | %-8d | %-9d |\n",
-                    rs.getString("type_name"), total, occupied, available);
-                
-                totalRooms += total;
-                totalOccupied += occupied;
+                    rs.getString("room_type"), t, o, a);
+                total += t;
+                occupied += o;
             }
             System.out.println("+---------------+-------+----------+-----------+");
             
-            double rate = totalRooms > 0 ? (totalOccupied * 100.0 / totalRooms) : 0;
-            System.out.printf("Occupancy Rate: %.2f%%\n", rate);
-            
+            double rate = total > 0 ? (occupied * 100.0 / total) : 0;
+            System.out.printf("Rate: %.2f%%\n", rate);
         } catch (SQLException e) {
             System.out.println("Error: " + e.getMessage());
         }
     }
     
-    // Revenue report
     private static void revenueReport() {
-        System.out.println("\n--- REVENUE REPORT ---");
+        System.out.println("\n--- REVENUE ---");
         
         try {
             Statement stmt = connection.createStatement();
-            String query = "SELECT " +
-                          "COUNT(*) AS bookings, " +
-                          "SUM(total_amount) AS revenue, " +
-                          "AVG(total_amount) AS avg_amount " +
-                          "FROM bookings " +
-                          "WHERE booking_status != 'CANCELLED'";
+            String query = "SELECT COUNT(*) AS bookings, SUM(total_amount) AS revenue, " +
+                          "AVG(total_amount) AS avg FROM bookings WHERE payment_status = 'PAID'";
             ResultSet rs = stmt.executeQuery(query);
             
             if (rs.next()) {
-                System.out.println("\n========================================");
-                System.out.println("Total Bookings: " + rs.getInt("bookings"));
+                System.out.println("\nTotal Bookings: " + rs.getInt("bookings"));
                 System.out.println("Total Revenue: ₹" + rs.getDouble("revenue"));
-                System.out.println("Average Booking: ₹" + String.format("%.2f", rs.getDouble("avg_amount")));
-                System.out.println("========================================");
+                System.out.println("Average: ₹" + String.format("%.2f", rs.getDouble("avg")));
             }
             
-            // Revenue by room type
-            String typeQuery = "SELECT rt.type_name, " +
-                              "COUNT(b.booking_id) AS bookings, " +
-                              "SUM(b.total_amount) AS revenue " +
-                              "FROM bookings b " +
+            // By room type
+            String typeQuery = "SELECT r.room_type, COUNT(b.booking_id) AS bookings, " +
+                              "SUM(b.total_amount) AS revenue FROM bookings b " +
                               "JOIN rooms r ON b.room_id = r.room_id " +
-                              "JOIN room_types rt ON r.type_id = rt.type_id " +
-                              "WHERE b.booking_status != 'CANCELLED' " +
-                              "GROUP BY rt.type_id";
+                              "WHERE b.payment_status = 'PAID' GROUP BY r.room_type";
             rs = stmt.executeQuery(typeQuery);
             
-            System.out.println("\nBy Room Type:");
-            System.out.println("+---------------+----------+------------+");
+            System.out.println("\n+---------------+----------+------------+");
             System.out.println("| Type          | Bookings | Revenue    |");
             System.out.println("+---------------+----------+------------+");
             
             while (rs.next()) {
                 System.out.printf("| %-13s | %-8d | ₹%-9.2f |\n",
-                    rs.getString("type_name"),
+                    rs.getString("room_type"),
                     rs.getInt("bookings"),
                     rs.getDouble("revenue"));
             }
             System.out.println("+---------------+----------+------------+");
-            
         } catch (SQLException e) {
             System.out.println("Error: " + e.getMessage());
         }
     }
     
-    // Helper method for integer input
     private static int getIntInput(String prompt) {
         while (true) {
             try {
                 System.out.print(prompt);
                 return Integer.parseInt(scanner.nextLine());
             } catch (NumberFormatException e) {
-                System.out.println("Please enter a valid number!");
+                System.out.println("Enter a number!");
+            }
+        }
+    }
+    
+    private static double getDoubleInput(String prompt) {
+        while (true) {
+            try {
+                System.out.print(prompt);
+                return Double.parseDouble(scanner.nextLine());
+            } catch (NumberFormatException e) {
+                System.out.println("Enter a valid number!");
             }
         }
     }
