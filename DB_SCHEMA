@@ -72,10 +72,77 @@ INSERT INTO rooms (room_number, room_type, price, capacity, floor_number) VALUES
 ('401', 'Suite', 6000.00, 4, 4),
 ('402', 'Suite', 6000.00, 4, 4);
 
--- Insert default staff
+-- Insert staff members
 INSERT INTO staff (username, password, full_name, role, phone) VALUES
 ('admin', 'admin123', 'System Administrator', 'ADMIN', '9876543210'),
-('reception', 'reception123', 'Reception Desk', 'RECEPTIONIST', '9876543211');
+('reception', 'reception123', 'Reception Desk', 'RECEPTIONIST', '9876543211'),
+('manager1', 'manager123', 'Rajesh Kumar', 'MANAGER', '9876543212'),
+('reception2', 'recep456', 'Priya Sharma', 'RECEPTIONIST', '9876543213'),
+('admin2', 'admin456', 'Amit Patel', 'ADMIN', '9876543214');
+
+-- Insert sample bookings with guest information
+INSERT INTO bookings (guest_name, guest_email, guest_phone, guest_id_proof, room_id, room_number, 
+                     check_in_date, check_out_date, num_guests, total_amount, payment_method, 
+                     payment_status, booking_status, special_requests, booked_by) VALUES
+-- Confirmed bookings (future)
+('Rahul Verma', 'rahul.v@email.com', '9123456701', 'AADHAR-123456789012', 1, '101', 
+ '2026-01-10', '2026-01-12', 1, 3000.00, NULL, 'PENDING', 'CONFIRMED', 'Early check-in if possible', 'reception'),
+
+('Sneha Reddy', 'sneha.r@email.com', '9123456702', 'PAN-ABCD1234E', 4, '201', 
+ '2026-01-15', '2026-01-18', 2, 7500.00, NULL, 'PENDING', 'CONFIRMED', 'Need extra pillows', 'reception'),
+
+('Vikram Singh', 'vikram.s@email.com', '9123456703', 'DL-DL1234567890123', 7, '301', 
+ '2026-01-20', '2026-01-23', 3, 12000.00, NULL, 'PENDING', 'CONFIRMED', 'Non-smoking room', 'reception2'),
+
+-- Checked-in guests (current)
+('Anita Desai', 'anita.d@email.com', '9123456704', 'PASSPORT-J1234567', 2, '102', 
+ '2026-01-03', '2026-01-05', 1, 3000.00, 'CARD', 'PENDING', 'CHECKED_IN', 'Need wake-up call at 6 AM', 'reception'),
+
+('Karthik Iyer', 'karthik.i@email.com', '9123456705', 'AADHAR-234567890123', 5, '202', 
+ '2026-01-02', '2026-01-06', 2, 10000.00, 'UPI', 'PENDING', 'CHECKED_IN', 'Vegetarian meals only', 'reception'),
+
+('Meera Joshi', 'meera.j@email.com', '9123456706', 'VOTER-ABC1234567', 9, '401', 
+ '2026-01-01', '2026-01-04', 4, 18000.00, 'CASH', 'PENDING', 'CHECKED_IN', 'Celebrating anniversary', 'reception2'),
+
+-- Checked-out guests (completed - paid)
+('Suresh Nair', 'suresh.n@email.com', '9123456707', 'AADHAR-345678901234', 3, '103', 
+ '2025-12-28', '2025-12-31', 1, 4500.00, 'CARD', 'PAID', 'CHECKED_OUT', 'None', 'admin'),
+
+('Pooja Gupta', 'pooja.g@email.com', '9123456708', 'PAN-EFGH5678I', 6, '203', 
+ '2025-12-25', '2025-12-30', 2, 12500.00, 'ONLINE', 'PAID', 'CHECKED_OUT', 'Room service required', 'reception'),
+
+('Arjun Menon', 'arjun.m@email.com', '9123456709', 'DL-KA9876543210123', 8, '302', 
+ '2025-12-20', '2025-12-27', 3, 28000.00, 'UPI', 'PAID', 'CHECKED_OUT', 'Airport pickup needed', 'reception'),
+
+('Divya Krishnan', 'divya.k@email.com', '9123456710', 'PASSPORT-K9876543', 10, '402', 
+ '2025-12-15', '2025-12-22', 4, 42000.00, 'CARD', 'PAID', 'CHECKED_OUT', 'Extra towels', 'reception2'),
+
+-- More past bookings for statistics
+('Ravi Shankar', 'ravi.s@email.com', '9123456711', 'AADHAR-456789012345', 1, '101', 
+ '2025-12-10', '2025-12-13', 1, 4500.00, 'CASH', 'PAID', 'CHECKED_OUT', 'Late checkout', 'admin'),
+
+('Lakshmi Balan', 'lakshmi.b@email.com', '9123456712', 'VOTER-DEF9876543', 4, '201', 
+ '2025-12-05', '2025-12-08', 2, 7500.00, 'UPI', 'PAID', 'CHECKED_OUT', 'Quiet room please', 'reception'),
+
+('Anil Kapoor', 'anil.k@email.com', '9123456713', 'PAN-IJKL9012M', 7, '301', 
+ '2025-11-28', '2025-12-02', 3, 16000.00, 'CARD', 'PAID', 'CHECKED_OUT', 'Business trip', 'reception'),
+
+('Kavita Mehta', 'kavita.m@email.com', '9123456714', 'AADHAR-567890123456', 2, '102', 
+ '2025-11-20', '2025-11-24', 1, 6000.00, 'ONLINE', 'PAID', 'CHECKED_OUT', 'Honeymoon suite', 'reception2'),
+
+('Sanjay Dutt', 'sanjay.d@email.com', '9123456715', 'DL-MH1234567890123', 5, '202', 
+ '2025-11-15', '2025-11-20', 2, 12500.00, 'CASH', 'PAID', 'CHECKED_OUT', 'Executive floor', 'admin'),
+
+-- Cancelled booking
+('Deepak Chopra', 'deepak.c@email.com', '9123456716', 'PASSPORT-L5432198', 8, '302', 
+ '2026-01-25', '2026-01-28', 3, 12000.00, NULL, 'REFUNDED', 'CANCELLED', 'Plans changed', 'reception'),
+
+-- Repeat customer (same guest, multiple bookings)
+('Rahul Verma', 'rahul.v@email.com', '9123456701', 'AADHAR-123456789012', 3, '103', 
+ '2025-11-10', '2025-11-12', 1, 3000.00, 'UPI', 'PAID', 'CHECKED_OUT', 'Regular customer', 'reception'),
+
+('Sneha Reddy', 'sneha.r@email.com', '9123456702', 'PAN-ABCD1234E', 6, '203', 
+ '2025-10-15', '2025-10-18', 2, 7500.00, 'CARD', 'PAID', 'CHECKED_OUT', 'Corporate booking', 'admin');
 
 -- Simple view for occupancy
 CREATE VIEW room_occupancy AS
